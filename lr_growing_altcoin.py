@@ -42,15 +42,19 @@ class TickerEntry(object):
 '''
 class Interval(object):
 
-	def __init__(self, ticker, interval_start, interval_end, lending_ticker_entries, avg_lending_rate=0):
+	def __init__(self, ticker, interval_start, interval_end, interest_entries=list(), lending_entries=list()):
 		self.ticker = ticker
 		self.interval_start = int(interval_start)
 		self.interval_end = int(interval_end)
 		self.interest_entries = interest_entries
-		self.lending_entries = lending_ticker_entries
+		self.lending_entries = lending_entries
+
+	def get_avg_lending_rate(self):
+		avg_lending_rate = sum(list(map(lambda x: x.lending_rate, self.lending_entries)))
+		return avg_lending_rate/float(len(self.lending_entries))
 
 	def to_string(self):
-		return "[Interval] %s - avg_lending_rate: %f, interval_start: %d, interval_end: %d, num_lending_ticker_entries: %d" % (self.ticker, self.avg_lending_rate, self.interval_start, self.interval_end, len(self.lending_ticker_entries))
+		return "[Interval] %s - interval_start: %d, interval_end: %d, num_interest_entries: %d, num_lending_ticker_entries: %d" % (self.ticker, self.interval_start, self.interval_end, len(self.lending_entries), len(self.interest_entries))
 
 '''
 Returns a list of TickerInfoEntryWithLending instances obtained from .csv file for a given ticker for given period of time
@@ -122,7 +126,7 @@ def get_avg_lending_rate(interval, ticker_entries):
 			for entry in entries_within_period:
 				lending_rate += entry.lending_rate
 			lending_rate = lending_rate/len(entries_within_period)
-			interval_entry = Interval(entry.ticker,period_start, period_end, entries_within_period, lending_rate)
+			interval_entry = Interval(entry.ticker, period_start, period_end, entries_within_period)
 			intervals.append(interval_entry)
 		return intervals
 	else:
@@ -136,14 +140,14 @@ def get_periods_of_interest(intervals):
 	for i in range(len(intervals)):
 		interest_interval_start = None
 		interest_interval_end = None
-		interest_tickers = list()
+		lending_tickers = list()
 		current_interval = intervals[i]
 		#if i < 1:
 		#	print("Initial interval: " + current_interval.to_string())
-		avg_lending_rate = current_interval.avg_lending_rate
+		avg_lending_rate = current_interval.get_avg_lending_rate()
 		#if i < 1:
 		#	print("Average lending rate: %f" % (avg_lending_rate))
-		for ticker_entry in current_interval.lending_ticker_entries:
+		for ticker_entry in current_interval.lending_entries:
 			#if i < 1:
 			#	print("Initial interval ticker entry: " + ticker_entry.to_string())
 			if ticker_entry.lending_rate >= avg_lending_rate:
@@ -160,26 +164,26 @@ def get_periods_of_interest(intervals):
 			if interest_interval_start and not interest_interval_end:
 				#if i < 1:
 				#	print("Adding ticker to interest interval: " + ticker_entry.to_string())
-				interest_tickers.append(ticker_entry)
+				lending_tickers.append(ticker_entry)
 			if interest_interval_start and interest_interval_end:
 				#if i < 1:
 				#	print("Interest interval rate is between %d and %d" % (interest_interval_start, interest_interval_end))
 				# ensure that short intervals with less than 10 ticker entries aren't counted
-				if len(interest_tickers) > 10:
-					interest_interval = Interval(ticker_entry.ticker, interest_interval_start, interest_interval_end, interest_tickers, avg_lending_rate)
+				if len(lending_tickers) > 10:
+					interest_interval = Interval(ticker_entry.ticker, interest_interval_start, interest_interval_end, lending_tickers)
 					interest_intervals.append(interest_interval)
 				interest_interval_start = None
 				interest_interval_end = None
-				interest_tickers = list()
+				lending_tickers = list()
 		try:
 			if interest_interval_start and not interest_interval_end:
 				num_intervals = 1
 				while(num_intervals+i<len(intervals)):
 					current_interval = intervals[i+num_intervals]
-					prev_period_num_tickers = len(intervals[i].lending_ticker_entries)
-					for j in range(0, len(current_interval.lending_ticker_entries)):
-						ticker_entry = current_interval.lending_ticker_entries[j]
-						tickers_considered = current_interval.lending_ticker_entries[:(j+1)]
+					prev_period_num_tickers = len(intervals[i].lending_entries)
+					for j in range(0, len(current_interval.lending_entries)):
+						ticker_entry = current_interval.lending_entries[j]
+						tickers_considered = current_interval.lending_entries[:(j+1)]
 						lending_rate_for_new_interval = 0.0
 						for ticker_considered in tickers_considered:
 							lending_rate_for_new_interval += ticker_considered.lending_rate
@@ -187,29 +191,28 @@ def get_periods_of_interest(intervals):
 						avg_lending_rate = (intervals[i].avg_lending_rate*prev_period_num_tickers+sum_lending_rates_for_new_interval)/float(prev_period_num_tickers + len(tickers_considered))
 						if ticker_entry.lending_rate < avg_lending_rate:
 							# ensure that short intervals with less than 10 ticker entries aren't counted
-							if len(interest_tickers) > 10:
+							if len(lending_tickers) > 10:
 								interest_interval_end = ticker_entry.timestamp
-								interest_interval = Interval(ticker_entry.ticker, interest_interval_start, interest_interval_end, interest_tickers, avg_lending_rate)
+								interest_interval = Interval(ticker_entry.ticker, interest_interval_start, interest_interval_end, lending_tickers)
 								interest_intervals.append(interest_interval)
 							raise BreakIt
 						else:
-							interest_tickers.append(ticker_entry)
+							lending_tickers.append(ticker_entry)
 					num_intervals += 1
 		except BreakIt:
 			pass
 	return interest_intervals
 
-def get_ticker_entries_in_interval(ticker_entries, interval):
-	filtered_ticker_entries = list(filter(lambda x: x.timestamp >= interval.interval_start and x.timestamp <= interval.interval_end, ticker_entries))
-	return Interval(interval.ticker, interval.interval_start, interval.interval_end, filtered_ticker_entries)
+def get_ticker_entries(ticker_entries, start_date, end_date):
+	filtered_ticker_entries = list(filter(lambda x: x.timestamp >= start_date and x.timestamp <= end_date, ticker_entries))
+	return filtered_ticker_entries
 
-def plot_interval(ticker_name, interest_interval, lending_interval):
-	close_prices = list(map(lambda x: x.close_price, interest_interval.lending_ticker_entries))
-	interest_interval_timestamps = list(map(lambda x: x.timestamp, interest_interval.lending_ticker_entries))
-	lending_interval_timestamps = list(map(lambda x: x.timestamp, interest_interval.lending_ticker_entries))
-	lending_rates = list(map(lambda x: x.timestamp, interest_interval.lending_ticker_entries))
+def plot_interval(ticker_name, interval):
+	interest_interval_timestamps = list(map(lambda x: x.timestamp, interval.interest_entries))
+	close_prices = list(map(lambda x: x.close_price, interval.interest_entries))
+	lending_interval_timestamps = list(map(lambda x: x.timestamp, interval.lending_entries))
+	lending_rates = list(map(lambda x: x.lending_rate, interval.lending_entries))
 	plt.plot(interest_interval_timestamps, close_prices, 'ro', lending_interval_timestamps, lending_rates, 'bo')
-	assert(len(timestamps) == len(close_prices))
 	plt.xlabel("Timestamp")
 	plt.ylabel(ticker_name.upper() + " Price")
 	plt.show()
@@ -217,20 +220,18 @@ def plot_interval(ticker_name, interest_interval, lending_interval):
 def main():
 	period_start = 1480530600.0
 	period_end = 1507062600.0
-	btc_entries = get_ticker_data_lending("BTC", "(2016-08-13)-btc_lending_rates_bitfinex.csv", period_start, period_end)
-	xmr_entries = get_ticker_data("XMR", "xmr_bitfinex_data.csv", period_start, period_end)
+	btc_entries = get_ticker_data_lending("BTC", "../(2016-08-13)-btc_lending_rates_bitfinex.csv", period_start, period_end)
+	xmr_entries = get_ticker_data("XMR", "../xmr_bitfinex_data.csv", period_start, period_end)
 	#get lending rates for 10 day intervals
 	lending_rate_intervals = get_avg_lending_rate(10*24*60*60, btc_entries)
 	#interest intervals
 	interest_intervals = get_periods_of_interest(lending_rate_intervals)
-	tgt_ticker_intervals = list()
 	for interest_interval in interest_intervals:
 		#print("[Interval] " + interest_interval.to_string())
-		tgt_ticker_interval = get_ticker_entries_in_interval(xmr_entries, interest_interval)
-		tgt_ticker_intervals.append(tgt_ticker_interval)
-	for tgt_ticker_interval in tgt_ticker_intervals:
-		print("XMR Interval: " + tgt_ticker_interval.to_string())
-	plot_interval("XMR", tgt_ticker_intervals[])
+		tgt_ticker_entries = get_ticker_entries(xmr_entries, interest_interval.interval_start, interest_interval.interval_end)
+		interest_intervals.interest_tickers = tgt_ticker_entries
+		print("Interval: " + tgt_ticker_interval.to_string())
+	plot_interval("XMR", tgt_ticker_intervals[0])
 
 if __name__ == "__main__":
 	main()
