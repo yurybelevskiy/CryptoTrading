@@ -3,58 +3,15 @@ import os
 import utils
 import math
 import matplotlib.pyplot as plt
+import operator
+import structures
+
+'''
+Constants
+'''
+TEN_DAYS = 10*24*60*60
 
 class BreakIt(Exception): pass
-
-'''
-Class that represents information about the ticker at a time instance
-'''
-class LendingTickerEntry(object):
-
-	def __init__(self, ticker, timestamp, lending_rate):
-		self.ticker = ticker
-		self.timestamp = int(timestamp)
-		self.lending_rate = float(lending_rate)
-
-	def to_string(self):
-		return "[LendingTickerEntry] %s - timestamp: %s, lending_rate: %s" % (self.ticker, self.timestamp, self.lending_rate)
-
-'''
-Class that represents information about the ticker at a time instance
-'''
-class TickerEntry(object):
-
-	def __init__(self, ticker, timestamp, close_price, volume):
-		self.ticker = ticker
-		self.timestamp = int(timestamp)
-		self.close_price = float(close_price)
-		self.volume = float(volume)
-
-	def to_string(self):
-		return "[TickerEntry] %s - timestamp: %d, volume: %f, close_price: %f" % (self.ticker, self.timestamp, self.volume, self.close_price)
-
-	def is_equal(self, other):
-		return other.timestamp == self.timestamp
-
-'''
-- Stores certain statistics for a ticker for an interval of time defined by (interval_start, interval_end)
-- Statistics include information like average lending rate for a given period of time 
-'''
-class Interval(object):
-
-	def __init__(self, ticker, interval_start, interval_end, interest_entries=list(), lending_entries=list()):
-		self.ticker = ticker
-		self.interval_start = int(interval_start)
-		self.interval_end = int(interval_end)
-		self.interest_entries = interest_entries
-		self.lending_entries = lending_entries
-
-	def get_avg_lending_rate(self):
-		avg_lending_rate = sum(list(map(lambda x: x.lending_rate, self.lending_entries)))
-		return avg_lending_rate/float(len(self.lending_entries))
-
-	def to_string(self):
-		return "[Interval] %s - interval_start: %d, interval_end: %d, num_interest_entries: %d, num_lending_ticker_entries: %d" % (self.ticker, self.interval_start, self.interval_end, len(self.lending_entries), len(self.interest_entries))
 
 '''
 Returns a list of TickerInfoEntryWithLending instances obtained from .csv file for a given ticker for given period of time
@@ -100,12 +57,11 @@ def get_ticker_data(ticker_name, path_to_file, start_date, end_date):
 	return ticker_entries_filtered
 
 '''
-- given ticker entries and interval time, splits tickers entries in groups
- based on the interval duration and calculates average lending rate for each group
-- returns list of Interval
-- interval is defined in number of seconds
+- given ticker entries and interval duration, splits tickers entries in intervals each lasting 'interval_duration'
+- returns list of Interval entries
+- duration of the interval is specified in number of seconds
 '''
-def get_avg_lending_rate(interval, ticker_entries):
+def generate_lending_intervals(interval_duration, ticker_entries):
 	start_date = float('inf')
 	end_date = -float('inf')
 	for entry in ticker_entries:
@@ -117,15 +73,11 @@ def get_avg_lending_rate(interval, ticker_entries):
 		num_parts = int(math.ceil((end_date - start_date)/interval))
 		intervals = list()
 		for part in range(1, num_parts):
-			period_start = start_date + (part - 1) * interval
-			period_end = start_date + part * interval
+			period_start = start_date + (part - 1) * interval_duration
+			period_end = start_date + part * interval_duration
 			if period_end > end_date:
 				period_end = end_date
 			entries_within_period = list(filter(lambda x: x.timestamp >= period_start and x.timestamp <= period_end, ticker_entries))
-			lending_rate = 0.0
-			for entry in entries_within_period:
-				lending_rate += entry.lending_rate
-			lending_rate = lending_rate/len(entries_within_period)
 			interval_entry = Interval(entry.ticker, period_start, period_end, entries_within_period)
 			intervals.append(interval_entry)
 		return intervals
@@ -135,7 +87,7 @@ def get_avg_lending_rate(interval, ticker_entries):
 '''
 Returns list of Intervals of interest when lending rate was higher than average 
 '''
-def get_periods_of_interest(intervals):
+def retrieve_interest_intervals(lending_intervals):
 	interest_intervals = list()
 	for i in range(len(intervals)):
 		interest_interval_start = None
@@ -222,10 +174,10 @@ def main():
 	period_end = 1507062600.0
 	btc_entries = get_ticker_data_lending("BTC", "../(2016-08-13)-btc_lending_rates_bitfinex.csv", period_start, period_end)
 	xmr_entries = get_ticker_data("XMR", "../xmr_bitfinex_data.csv", period_start, period_end)
-	#get lending rates for 10 day intervals
-	lending_rate_intervals = get_avg_lending_rate(10*24*60*60, btc_entries)
+	#get lending intervals where each interval lasts for 10 days
+	lending_intervals = generate_lending_intervals(TEN_DAYS, btc_entries)
 	#interest intervals
-	interest_intervals = get_periods_of_interest(lending_rate_intervals)
+	interest_intervals = retrieve_interest_intervals(lending_intervals)
 	for interest_interval in interest_intervals:
 		#print("[Interval] " + interest_interval.to_string())
 		tgt_ticker_entries = get_ticker_entries(xmr_entries, interest_interval.interval_start, interest_interval.interval_end)
