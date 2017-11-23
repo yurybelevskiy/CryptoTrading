@@ -186,30 +186,10 @@ class Interval(object):
 
     def to_string(self):
         return "[Interval] %s - start date: %d, end date: %d" % (self.ticker_name, self.start_date, self.end_date)
-
 '''
-Base class representing interval defined as a period of time between start date and end date
-'''
-class InterestInterval(Interval):
-
-    def __init__(self, ticker_name, start_date, end_date, entries):
-        super().__init__(ticker_name, start_date, end_date)
-        self.entries = entries
-
-    entries = property(operator.attrgetter('_entries'))
-
-    @entries.setter
-    def entries(self, en):
-        if not en: raise Exception("entries cannot be null")
-        if not isinstance(en, (lst)): raise Exception("entries should be list")
-        if not all(isinstance(entry, TickerEntry) for entry in en): raise Exception("entries in the list should be TickerEntry")
-        self._entries = en
-
-    def to_string(self):
-        return "[InterestInterval] %s - start date: %d, end date: %d, number of TickerEntry instances: %d" % (self.ticker_name, self.start_date, self.end_date, len(self.entries))
-
-'''
-Base class representing interval defined as a period of time between start date and end date
+Subclass of interval which is characterized by entries that have a lending rate value.
+Typically, input data consisting of LendingTickerEntry instances is split to lending intervals of fixed length determined by set constant.
+Obtained LendingInterval instances are used for further analysis i.e. discovery of InterestInterval
 '''
 class LendingInterval(Interval):
 
@@ -223,7 +203,7 @@ class LendingInterval(Interval):
     def lending_entries(self, le):
         if not le: raise Exception("lending entries cannot be null")
         if not isinstance(tn, (lst)): raise Exception("lending entries should be list")
-        if not all(isinstance(lending_entry, LendingTickerEntry) for lending_entry in le): raise Exception("entries in the list should be LendingTickerEntry")
+        if not all(isinstance(lending_entry, LendingTickerEntry) for lending_entry in le): raise Exception("entries in the list should be of type LendingTickerEntry")
         self._lending_entries = le
 
     def get_avg_lending_rate(self):
@@ -232,3 +212,26 @@ class LendingInterval(Interval):
 
     def to_string(self):
         return "[LendingInterval] %s - start date: %d, end date: %d, number of LendingTickerEntry instances: %d" % (self.ticker_name, self.start_date, self.end_date, len(self.lending_entries))
+
+'''
+Subclass of LendingInterval which represents an "interest" interval: the interval that is characterized by ticker entries
+which lending rate value is higher than average
+InterestInterval stores both: lending ticker entries respective for that period and target or "interest" ticker entries for the period 
+'''
+class InterestInterval(LendingInterval):
+
+    def __init__(self, ticker_name, start_date, end_date, lending_entries, interest_entries=list()):
+        super().__init__(ticker_name, start_date, end_date, lending_entries)
+        self.interest_entries = interest_entries
+
+    interest_entries = property(operator.attrgetter('_interest_entries'))
+
+    @interest_entries.setter
+    def interest_entries(self, ie):
+        if not ie: raise Exception("interest entries cannot be null")
+        if not isinstance(ie, (lst)): raise Exception("interest entries should be list")
+        if not all(isinstance(entry, DetailedTickerEntry) for entry in ie): raise Exception("interest entries in the list should be of type DetailedTickerEntry")
+        self._interest_entries = ie
+
+    def to_string(self):
+        return "[InterestInterval] %s - start date: %d, end date: %d, num LendingTickerEntry instances: %d, num interest TickerEntry instances: %d" % (self.ticker_name, self.start_date, self.end_date, len(self.lending_entries), len(self.interest_entries))
