@@ -1,44 +1,46 @@
+import operator
+
 '''
 Base class representing simple ticker entry storing timestamp and ticker name
 '''
 class TickerEntry(object):
 
-	def __init__(self, ticker, timestamp):
-		self.ticker = ticker
-		self.timestamp = timestamp
+    def __init__(self, ticker, timestamp):
+        self.ticker = ticker
+        self.timestamp = timestamp
 
-	ticker = property(operator.attrgetter('_ticker'))
+    ticker = property(operator.attrgetter('_ticker'))
 
-	@ticker.setter
+    @ticker.setter
     def ticker(self, t):
         if not t: raise Exception("ticker cannot be null")
         if not isinstance(t, (basestring)): raise Exception("ticker should be str")
         self._ticker = t
 
-	timestamp = property(operator.attrgetter('_timestamp'))
+    timestamp = property(operator.attrgetter('_timestamp'))
 
-	@timestamp.setter
+    @timestamp.setter
     def timestamp(self, t):
         if not t: raise Exception("timestamp cannot be null")
         if not isinstance(t, (basestring, int)): raise Exception("timestamp should be str or int")
         if isinstance(t, (basestring)):
-        	try:
-        		timestamp = int(t)
-        		if timestamp > 0:
-        			self._timestamp = timestamp
-        		else:
-        			raise Exception("value of timestamp should be non-negative")
-        	except ValueError:
-        		raise Exception("given timestamp string doesn't represent an integer")
+            try:
+                timestamp = int(t)
+                if timestamp > 0:
+                    self._timestamp = timestamp
+                else:
+                    raise Exception("value of timestamp should be non-negative")
+            except ValueError:
+               raise Exception("given timestamp string doesn't represent an integer")
         else:
-        	if t <= 0: raise Exception("value of timestamp should be non-negative")
-        	self._timestamp = t
+            if t <= 0: raise Exception("value of timestamp should be non-negative")
+            self._timestamp = t
 
-	def to_string(self):
-		return "[TickerEntry] %s - timestamp: %d" % (self.ticker, self.timestamp)
+    def to_string(self):
+        return "[TickerEntry] %s - timestamp: %d" % (self.ticker, self.timestamp)
 
-	def is_equal(self, other):
-		return (other.timestamp == self.timestamp) and (other.ticker == self.ticker)
+    def is_equal(self, other):
+        return (other.timestamp == self.timestamp) and (other.ticker == self.ticker)
 
 '''
 Class that represents ticker entry with a lending rate as well as
@@ -46,31 +48,31 @@ properties inherited from TickerEntry base class
 '''
 class LendingTickerEntry(TickerEntry):
 
-	def __init__(self, ticker, timestamp, lending_rate):
-		super().__init__(ticker, timestamp)
-		self.lending_rate = lending_rate
+    def __init__(self, ticker, timestamp, lending_rate):
+        super(LendingTickerEntry, self).__init__(ticker, timestamp)
+        self.lending_rate = lending_rate
 
-	lending_rate = property(operator.attrgetter('_lending_rate'))
+    lending_rate = property(operator.attrgetter('_lending_rate'))
 
-	@lending_rate.setter
+    @lending_rate.setter
     def lending_rate(self, lr):
         if not lr: raise Exception("lending rate cannot be null")
         if not isinstance(lr, (basestring, float)): raise Exception("lending rate should be str or float")
         if isinstance(lr, (basestring)):
-        	try:
-        		lending_rate = float(lr)
-        		if lending_rate > 0.0:
-        			self._lending_rate = lending_rate
-        		else:
-        			raise Exception("value of lending rate should be non-negative")
-        	except ValueError:
-        		raise Exception("given lending rate string doesn't represent a float")
+            try:
+                lending_rate = float(lr)
+                if lending_rate > 0.0:
+                    self._lending_rate = lending_rate
+                else:
+                    raise Exception("value of lending rate should be non-negative")
+            except ValueError:
+                raise Exception("given lending rate string doesn't represent a float")
         else:
-        	if lr <= 0.0: raise Exception("value of lending rate should be non-negative")
-        	self._lending_rate = lr
+            if lr <= 0.0: raise Exception("value of lending rate should be non-negative")
+            self._lending_rate = lr
 
-	def to_string(self):
-		return "[LendingTickerEntry] %s - timestamp: %d, lending_rate: %f" % (self.ticker, self.timestamp, self.lending_rate)
+    def to_string(self):
+        return "[LendingTickerEntry] %s - timestamp: %d, lending_rate: %f" % (self.ticker, self.timestamp, self.lending_rate)
 
 '''
 Class that represents ticker entry containing information such as close price, volume and
@@ -78,51 +80,51 @@ Class that represents ticker entry containing information such as close price, v
 '''
 class DetailedTickerEntry(TickerEntry):
 
-	def __init__(self, ticker, timestamp, close_price, volume):
-		super().__init__(ticker, timestamp)
-		self.close_price = close_price
-		self.volume = volume
+    def __init__(self, ticker, timestamp, close_price, volume):
+        super(DetailedTickerEntry, self).__init__(ticker, timestamp)
+        self.close_price = close_price
+        self.volume = volume
 
-	close_price = property(operator.attrgetter('_close_price'))
+    close_price = property(operator.attrgetter('_close_price'))
 
-	@close_price.setter
+    @close_price.setter
     def close_price(self, cp):
         if not cp: raise Exception("close price cannot be null")
         if not isinstance(cp, (basestring, float)): raise Exception("close price should be str or float")
         if isinstance(cp, (basestring)):
-        	try:
-        		close_price = float(cp)
-        		if close_price > 0.0:
-        			self._close_price = close_price
-        		else:
-        			raise Exception("value of close price should be non-negative")
-        	except ValueError:
-        		raise Exception("given close price string doesn't represent a float")
+            try:
+                close_price = float(cp)
+                if close_price > 0.0:
+                    self._close_price = close_price
+                else:
+                    raise Exception("value of close price should be non-negative")
+            except ValueError:
+                raise Exception("given close price string doesn't represent a float")
         else:
-        	if cp <= 0.0: raise Exception("value of close price should be non-negative")
-        	self._close_price = cp
+            if cp <= 0.0: raise Exception("value of close price should be non-negative")
+            self._close_price = cp
 
     volume = property(operator.attrgetter('_volume'))
 
-	@volume.setter
+    @volume.setter
     def volume(self, v):
         if not v: raise Exception("volume cannot be null")
         if not isinstance(v, (basestring, float)): raise Exception("volume should be str or float")
         if isinstance(v, (basestring)):
-        	try:
-        		volume = float(v)
-        		if volume > 0.0:
-        			self._volume = volume
-        		else:
-        			raise Exception("value of volume should be non-negative")
-        	except ValueError:
-        		raise Exception("given volume string doesn't represent a float")
+            try:
+                volume = float(v)
+                if volume > 0.0:
+                    self._volume = volume
+                else:
+                    raise Exception("value of volume should be non-negative")
+            except ValueError:
+                raise Exception("given volume string doesn't represent a float")
         else:
-        	if v <= 0.0: raise Exception("value of volume should be non-negative")
-        	self._volume = v
+            if v <= 0.0: raise Exception("value of volume should be non-negative")
+            self._volume = v
 
-	def to_string(self):
-		return "[DetailedTickerEntry] %s - timestamp: %d, volume: %f, close_price: %f" % (self.ticker, self.timestamp, self.volume, self.close_price)
+    def to_string(self):
+        return "[DetailedTickerEntry] %s - timestamp: %d, volume: %f, close_price: %f" % (self.ticker, self.timestamp, self.volume, self.close_price)
 
 '''
 Base class representing interval defined as a period of time between start date and end date
@@ -131,8 +133,8 @@ class Interval(object):
 
     def __init__(self, ticker_name, start_date, end_date):
         self.ticker_name = ticker_name
-        self.start_date = interval_start
-        self.end_date = interval_end
+        self.start_date = start_date
+        self.end_date = end_date
 
     ticker_name = property(operator.attrgetter('_ticker_name'))
 
@@ -194,7 +196,7 @@ Obtained LendingInterval instances are used for further analysis i.e. discovery 
 class LendingInterval(Interval):
 
     def __init__(self, ticker_name, start_date, end_date, lending_entries):
-        super().__init__(ticker_name, start_date, end_date)
+        super(LendingInterval, self).__init__(ticker_name, start_date, end_date)
         self.lending_entries = lending_entries
 
     lending_entries = property(operator.attrgetter('_lending_entries'))
@@ -202,7 +204,7 @@ class LendingInterval(Interval):
     @lending_entries.setter
     def lending_entries(self, le):
         if not le: raise Exception("lending entries cannot be null")
-        if not isinstance(tn, (lst)): raise Exception("lending entries should be list")
+        if not isinstance(le, (list)): raise Exception("lending entries should be list")
         if not all(isinstance(lending_entry, LendingTickerEntry) for lending_entry in le): raise Exception("entries in the list should be of type LendingTickerEntry")
         self._lending_entries = le
 
@@ -221,7 +223,7 @@ InterestInterval stores both: lending ticker entries respective for that period 
 class InterestInterval(LendingInterval):
 
     def __init__(self, ticker_name, start_date, end_date, lending_entries, interest_entries=list()):
-        super().__init__(ticker_name, start_date, end_date, lending_entries)
+        super(InterestInterval, self).__init__(ticker_name, start_date, end_date, lending_entries)
         self.interest_entries = interest_entries
 
     interest_entries = property(operator.attrgetter('_interest_entries'))

@@ -3,8 +3,7 @@ import os
 import utils
 import math
 import matplotlib.pyplot as plt
-import operator
-import structures
+from structures import *
 
 '''
 Constants
@@ -71,7 +70,7 @@ def get_ticker_data(ticker_name, path_to_file, start_date, end_date):
 		else:
 			raise Exception("Expected float value, instead got " + timestamp)
 		if timestamp >= start_date and timestamp <= end_date:
-			entry = DetailedTickerEntry(ticker_name, row[0]/1000.0, row[2], row[5])
+			entry = DetailedTickerEntry(ticker_name, int(row[0]/1000.0), row[2], row[5])
 			entries.append(entry)
 	print("%d %s entries collected!" % (len(entries), ticker_name))
 	return entries
@@ -90,7 +89,7 @@ def generate_lending_intervals(duration, entries):
 		if float(entry.timestamp) > end_date:
 			end_date = entry.timestamp
 	if start_date != float('inf') and end_date != -float('inf'):
-		num_intervals = int(math.ceil((end_date - start_date)/interval))
+		num_intervals = int(math.ceil((end_date - start_date)/duration))
 		intervals = list()
 		for i in range(1, num_intervals):
 			period_start = start_date + (i - 1) * duration
@@ -151,7 +150,7 @@ def get_interest_intervals(lending_intervals):
 						#calculate sum of lending rates for entries considered in new period
 						lend_rate_new_interval = sum(list(map(lambda x: x.lending_rate, tickers_considered)))
 						#average lending rate is now calculated across all tickets considered
-						avg_lending_rate = (prev_interval.avg_lending_rate*len(prev_interval.lending_entries)+lend_rate_new_interval)/float(len(prev_interval.lending_entries) + len(tickers_considered))
+						avg_lending_rate = (prev_interval.get_avg_lending_rate()*len(prev_interval.lending_entries)+lend_rate_new_interval)/float(len(prev_interval.lending_entries) + len(tickers_considered))
 						#stop interest interval if lending rate is becoming lower than average lending rate over all considered entries
 						if entry.lending_rate < avg_lending_rate:
 							# ensure that short intervals with less than 10 ticker entries aren't counted
@@ -161,15 +160,11 @@ def get_interest_intervals(lending_intervals):
 								interest_intervals.append(interest_interval)
 							raise BreakIt
 						else:
-							lending_tickers.append(ticker_entry)
+							lending_tickers.append(entry)
 					num_intervals += 1
 		except BreakIt:
 			pass
 	return interest_intervals
-
-def get_ticker_entries(ticker_entries, start_date, end_date):
-	filtered_ticker_entries = list(filter(lambda x: x.timestamp >= start_date and x.timestamp <= end_date, ticker_entries))
-	return filtered_ticker_entries
 
 def plot_interval(ticker_name, interval):
 	interest_interval_timestamps = list(map(lambda x: x.timestamp, interval.interest_entries))
