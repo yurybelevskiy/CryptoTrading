@@ -230,10 +230,9 @@ class InterestInterval(LendingInterval):
 
     @interest_entries.setter
     def interest_entries(self, ie):
-        if not ie: raise Exception("interest entries cannot be null")
-        if not isinstance(ie, (lst)): raise Exception("interest entries should be list")
+        if not isinstance(ie, (list)): raise Exception("interest entries should be list")
         if not all(isinstance(entry, DetailedTickerEntry) for entry in ie): raise Exception("interest entries in the list should be of type DetailedTickerEntry")
         self._interest_entries = ie
 
     def to_string(self):
-        return "[InterestInterval] %s - start date: %d, end date: %d, num LendingTickerEntry instances: %d, num interest TickerEntry instances: %d" % (self.ticker_name, self.start_date, self.end_date, len(self.lending_entries), len(self.interest_entries))
+        return "[InterestInterval] %s - start date: %d, end date: %d, num LendingTickerEntry instances: %d, num InterestTickerEntry instances: %d" % (self.ticker_name, self.start_date, self.end_date, len(self.lending_entries), len(self.interest_entries))

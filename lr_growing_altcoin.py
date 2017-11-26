@@ -167,13 +167,18 @@ def get_interest_intervals(lending_intervals):
 	return interest_intervals
 
 def plot_interval(ticker_name, interval):
-	interest_interval_timestamps = list(map(lambda x: x.timestamp, interval.interest_entries))
+	plt.figure(1)
+	interest_timestamps = list(map(lambda x: x.timestamp, interval.interest_entries))
 	close_prices = list(map(lambda x: x.close_price, interval.interest_entries))
-	lending_interval_timestamps = list(map(lambda x: x.timestamp, interval.lending_entries))
-	lending_rates = list(map(lambda x: x.lending_rate, interval.lending_entries))
-	plt.plot(interest_interval_timestamps, close_prices, 'ro', lending_interval_timestamps, lending_rates, 'bo')
+	plt.plot(interest_timestamps, close_prices)
 	plt.xlabel("Timestamp")
 	plt.ylabel(ticker_name.upper() + " Price")
+	plt.figure(2)
+	lending_timestamps = list(map(lambda x: x.timestamp, interval.lending_entries))
+	lending_rates = list(map(lambda x: x.lending_rate, interval.lending_entries))
+	plt.plot(lending_timestamps, lending_rates)
+	plt.xlabel("Timestamp")
+	plt.ylabel(ticker_name.upper() + " Lending Rate")
 	plt.show()
 
 def main():
@@ -189,7 +194,7 @@ def main():
 		entries = list(filter(lambda x: x.timestamp >= interval.start_date and x.timestamp <= interval.end_date, xmr_entries))
 		interval.interest_entries = entries
 		print("Interval: " + interval.to_string())
-	#plot_interval("XMR", tgt_ticker_intervals[0])
+	plot_interval("XMR", interest_intervals[4])
 
 if __name__ == "__main__":
 	main()
