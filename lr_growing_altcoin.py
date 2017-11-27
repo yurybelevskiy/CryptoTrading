@@ -164,6 +164,7 @@ def get_interest_intervals(lending_intervals):
 					num_intervals += 1
 		except BreakIt:
 			pass
+	interest_intervals = list(filter(lambda x: x.is_growing(), interest_intervals))
 	return interest_intervals
 
 def plot_interval(ticker_name, interval):
@@ -190,6 +191,7 @@ def main():
 	lending_intervals = generate_lending_intervals(TEN_DAYS, btc_entries)
 	#interest intervals
 	interest_intervals = get_interest_intervals(lending_intervals)
+	print("Total interest intervals: %d" % (len(interest_intervals)))
 	for interval in interest_intervals:
 		entries = list(filter(lambda x: x.timestamp >= interval.start_date and x.timestamp <= interval.end_date, xmr_entries))
 		interval.interest_entries = entries

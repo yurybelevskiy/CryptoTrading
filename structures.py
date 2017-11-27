@@ -1,4 +1,5 @@
 import operator
+from scipy import stats
 
 '''
 Base class representing simple ticker entry storing timestamp and ticker name
@@ -182,10 +183,6 @@ class Interval(object):
             if ed <= 0: raise Exception("value of end date should be non-negative")
             self._end_date = ed
 
-    def get_avg_lending_rate(self):
-        avg_lending_rate = sum(list(map(lambda x: x.lending_rate, self.lending_entries)))
-        return avg_lending_rate/float(len(self.lending_entries))
-
     def to_string(self):
         return "[Interval] %s - start date: %d, end date: %d" % (self.ticker_name, self.start_date, self.end_date)
 '''
@@ -211,6 +208,16 @@ class LendingInterval(Interval):
     def get_avg_lending_rate(self):
         avg_lending_rate = sum(list(map(lambda x: x.lending_rate, self.lending_entries)))
         return avg_lending_rate/float(len(self.lending_entries))
+
+    '''
+    Returns True if lending_entries within the interval are such that lending rate is actually growing
+    Otherwise, returns False
+    '''
+    def is_growing(self):
+        lending_rates = list(map(lambda x: x.lending_rate, self.lending_entries))
+        timestamps = list(map(lambda x: x.timestamp, self.lending_entries))
+        slope, _, _, _, _ = stats.linregress(timestamps, lending_rates)
+        return slope > 0.0
 
     def to_string(self):
         return "[LendingInterval] %s - start date: %d, end date: %d, number of LendingTickerEntry instances: %d" % (self.ticker_name, self.start_date, self.end_date, len(self.lending_entries))
