@@ -1,5 +1,6 @@
 import operator
 from scipy import stats
+import abc
 
 '''
 Base class representing simple ticker entry storing timestamp and ticker name
@@ -243,3 +244,80 @@ class InterestInterval(LendingInterval):
 
     def to_string(self):
         return "[InterestInterval] %s - start date: %d, end date: %d, num LendingTickerEntry instances: %d, num InterestTickerEntry instances: %d" % (self.ticker_name, self.start_date, self.end_date, len(self.lending_entries), len(self.interest_entries))
+
+'''
+Base class representing a stragegy which can be derived from InterestInterval
+'''
+class DealStrategy(object):
+
+    def __init__(self, interest_interval):
+        self.interest_interval = interest_interval
+
+    interest_interval = property(operator.attrgetter('_interest_interval'))
+
+    @interest_interval.setter
+    def interest_interval(self, ii):
+        if not ii: raise Exception("interest interval cannot be null")
+        if not isinstance(ii, (InterestInterval)): raise Exception("interest interval should be of type InterestInterval")
+        self._interest_interval = ii
+
+'''
+Base class representing a strategy when deal should be entered
+'''
+class EnterDealStrategy(DealStrategy):
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def get_enter_time(self):
+        '''
+        Subclasses should return Unix timestamp when a deal should be entered based on the strategy-specific behaviour
+        '''
+        return
+
+'''
+A specific instance of EnterDealStrategy which assumes that best time to enter the deal is at the start of given InterestInterval
+'''
+class IntervalStartEnterDealStrategy(EnterDealStrategy):
+
+    def get_enter_time(self):
+        return self.interest_interval.start_date
+
+'''
+Base class representing a strategy when deal should be exited
+'''
+class CloseDealStrategy(DealStrategy):
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def get_close_time(self):
+        '''
+        Subclasses should return Unix timestamp when a deal should be closed based on the strategy-specific behaviour
+        '''
+        return
+
+'''
+A specific instance of CloseDealStrategy which assumes that best time to close the deal is when
+lending rate of 'lending_entries' falls below average for the interest interval
+'''
+class LrLessThanAvgCloseDealStrategy(DealStrategy):
+
+    def get_close_time(self):
+        return
+
+'''
+A specific instance of CloseDealStrategy which assumes that best time to close the deal is when
+lending rate of 'lending_entries' falls more than X% from the max lending rate for the interest interval
+'''
+class LrFallsXPercentCloseDealStrategy(DealStrategy):
+
+    def get_close_time(self):
+        return
+        
+'''
+A specific instance of CloseDealStrategy which assumes that best time to close the deal is when
+lending rate of 'lending_entries' falls for more than X time periods starting from the timestamp of max lending rate for the interest interval
+'''
+class LrFallsXPeriodsCloseDealStrategy(DealStrategy):
+
+    def get_close_time(self):
+        return

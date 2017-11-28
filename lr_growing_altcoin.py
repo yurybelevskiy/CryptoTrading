@@ -196,7 +196,7 @@ def main():
 		entries = list(filter(lambda x: x.timestamp >= interval.start_date and x.timestamp <= interval.end_date, xmr_entries))
 		interval.interest_entries = entries
 		print("Interval: " + interval.to_string())
-	plot_interval("XMR", interest_intervals[4])
+	plot_interval("XMR", interest_intervals[0])
 
 if __name__ == "__main__":
 	main()
