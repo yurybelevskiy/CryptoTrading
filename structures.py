@@ -246,9 +246,10 @@ class InterestInterval(LendingInterval):
         return "[InterestInterval] %s - start date: %d, end date: %d, num LendingTickerEntry instances: %d, num InterestTickerEntry instances: %d" % (self.ticker_name, self.start_date, self.end_date, len(self.lending_entries), len(self.interest_entries))
 
 '''
-Base class representing a stragegy which can be derived from InterestInterval
+Abstract base class representing a stragegy which can be derived from InterestInterval
 '''
 class DealStrategy(object):
+    __metaclass__ = abc.ABCMeta
 
     def __init__(self, interest_interval):
         self.interest_interval = interest_interval
@@ -262,7 +263,7 @@ class DealStrategy(object):
         self._interest_interval = ii
 
 '''
-Base class representing a strategy when deal should be entered
+Abstract base class representing a strategy when deal should be entered
 '''
 class EnterDealStrategy(DealStrategy):
     __metaclass__ = abc.ABCMeta
@@ -283,7 +284,7 @@ class IntervalStartEnterDealStrategy(EnterDealStrategy):
         return self.interest_interval.start_date
 
 '''
-Base class representing a strategy when deal should be exited
+Abstract base class representing a strategy when deal should be exited
 '''
 class CloseDealStrategy(DealStrategy):
     __metaclass__ = abc.ABCMeta
