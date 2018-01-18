@@ -13,69 +13,6 @@ TEN_DAYS = 10*24*60*60
 class BreakIt(Exception): pass
 
 '''
-Returns a list of TickerInfoEntryWithLending instances obtained from .csv file for a given ticker for given period of time
-This function aims to convert .csv entries obtained using https://api.bitfinex.com/v1/lends/<currency> together with https://api.bitfinex.com/v1/pubticker/<symbol>
-If no information for the period is available, returns empty list
-'''
-def get_lending_ticker_data(ticker_name, path_to_file, start_date, end_date):
-	assert(path_to_file is not None and len(path_to_file) > 0), "Invalid path to file!"
-	filename, file_extension = os.path.splitext(path_to_file)
-	assert(len(filename) > 0), "Invalid file given!"
-	assert(file_extension == ".csv"), "Wrong file extension!"
-	dataframe = pd.read_csv(path_to_file, header=None, usecols=[2,3])
-	entries = list()
-	for index, row in dataframe.iterrows():
-		#avoid reading header line
-		if index == 0:
-			pass
-		else:
-			timestamp = row[3]
-			if isinstance(timestamp, (int, float)):
-				pass
-			elif isinstance(timestamp, basestring):
-				try:
-					timestamp = int(timestamp)
-				except ValueError:
-					raise Exception("Expected integer value, instead got %s" % timestamp)
-			else:
-				raise Exception("Expected integer value, instead got " + timestamp)
-			if timestamp >= start_date and timestamp <= end_date:
-				entry = LendingTickerEntry(ticker_name, row[3], row[2])
-				entries.append(entry)
-	print("%d %s entries collected!" % (len(entries), ticker_name))
-	return entries
-
-'''
-Returns a list of TickerInfoEntry instances obtained from .csv file for a given ticker for given period of time
-This function aims to convert .csv entries obtained using https://api.bitfinex.com/v2/candles/trade::TimeFrame::Symbol/<Section>
-If no information for the period is available, returns empty list
-'''
-def get_ticker_data(ticker_name, path_to_file, start_date, end_date):
-	assert(path_to_file is not None and len(path_to_file) > 0), "Invalid path to file!"
-	filename, file_extension = os.path.splitext(path_to_file)
-	assert(len(filename) > 0), "Invalid file given!"
-	assert(file_extension == ".csv"), "Wrong file extension!"
-	dataframe = pd.read_csv(path_to_file, header=None, usecols=[0,2,5])
-	entries = list()
-	for index, row in dataframe.iterrows():
-		#timestamp is presented in milliseconds this dataset
-		timestamp = row[0]
-		if isinstance(timestamp, (float)):
-			timestamp = timestamp/1000.0
-		elif isinstance(timestamp, basestring):
-			try:
-				timestamp = float(timestamp)/1000.0
-			except:
-				raise Exception("Expected float value, instead got %s" % timestamp)
-		else:
-			raise Exception("Expected float value, instead got " + timestamp)
-		if timestamp >= start_date and timestamp <= end_date:
-			entry = DetailedTickerEntry(ticker_name, int(row[0]/1000.0), row[2], row[5])
-			entries.append(entry)
-	print("%d %s entries collected!" % (len(entries), ticker_name))
-	return entries
-
-'''
 - given ticker entries and interval duration, splits tickers entries in intervals each lasting 'interval_duration'
 - returns list of Interval entries
 - duration of the interval is specified in number of seconds
@@ -108,6 +45,8 @@ Returns list of Intervals of interest when lending rate was higher than average
 '''
 def get_interest_intervals(lending_intervals):
 	interest_intervals = list()
+	filtered_interest_intervals = list()
+	filteredout_interest_intervals = list()
 	for i in range(len(lending_intervals)):
 		interest_interval_start = None
 		interest_interval_end = None
@@ -164,39 +103,45 @@ def get_interest_intervals(lending_intervals):
 					num_intervals += 1
 		except BreakIt:
 			pass
-	interest_intervals = list(filter(lambda x: x.is_growing(), interest_intervals))
-	return interest_intervals
-
-def plot_interval(ticker_name, interval):
-	plt.figure(1)
-	interest_timestamps = list(map(lambda x: x.timestamp, interval.interest_entries))
-	close_prices = list(map(lambda x: x.close_price, interval.interest_entries))
-	plt.plot(interest_timestamps, close_prices)
-	plt.xlabel("Timestamp")
-	plt.ylabel(ticker_name.upper() + " Price")
-	plt.figure(2)
-	lending_timestamps = list(map(lambda x: x.timestamp, interval.lending_entries))
-	lending_rates = list(map(lambda x: x.lending_rate, interval.lending_entries))
-	plt.plot(lending_timestamps, lending_rates)
-	plt.xlabel("Timestamp")
-	plt.ylabel(ticker_name.upper() + " Lending Rate")
-	plt.show()
+	for interval in interest_intervals:
+		if interval.is_growing():
+			filtered_interest_intervals.append(interval)
+		else:
+			filteredout_interest_intervals.append(interval)
+	return filtered_interest_intervals, filteredout_interest_intervals
 
 def main():
+	# define period that we are interested in
 	period_start = 1480530600.0
 	period_end = 1507062600.0
-	btc_entries = get_lending_ticker_data("BTC", "../(2016-08-13)-btc_lending_rates_bitfinex.csv", period_start, period_end)
-	xmr_entries = get_ticker_data("XMR", "../xmr_bitfinex_data.csv", period_start, period_end)
-	#get lending intervals where each interval lasts for 10 days
+
+	# collect data about tickers for respective interest period
+	btc_rows = utils.get_ticker_data("data/(2016-08-13)-btc_lending_rates_bitfinex.csv", period_start, period_end, 0)
+	btc_entries = utils.df_rows_to_lending_entries("BTC", btc_rows, 0, 3)
+	print("%d %s entries collected!" % (len(btc_entries), "BTC"))
+	xmr_rows = utils.get_ticker_data("data/xmr_bitfinex_data.csv", period_start, period_end, 0)
+	xmr_entries = utils.df_rows_to_interest_entries("XMR", xmr_rows, 0, 2, 5)
+	print("%d %s entries collected!" % (len(xmr_entries), "XMR"))
+
+	#break data about lending rates into 10 day intervals
 	lending_intervals = generate_lending_intervals(TEN_DAYS, btc_entries)
-	#interest intervals
-	interest_intervals = get_interest_intervals(lending_intervals)
-	print("Total interest intervals: %d" % (len(interest_intervals)))
-	for interval in interest_intervals:
+
+	# return interest intervals that have passed filter function and those which didn't
+	filtered_interest_intervals, filteredout_interest_intervals = get_interest_intervals(lending_intervals)
+	print("Total filtered interest intervals: %d" % (len(filtered_interest_intervals)))
+	for interval in filtered_interest_intervals:
 		entries = list(filter(lambda x: x.timestamp >= interval.start_date and x.timestamp <= interval.end_date, xmr_entries))
 		interval.interest_entries = entries
 		print("Interval: " + interval.to_string())
-	plot_interval("XMR", interest_intervals[0])
+	print("------------------------------------")
+	print("Total filtered out interest intervals: %d" % (len(filteredout_interest_intervals)))
+	for filtered_interval in filteredout_interest_intervals:
+		entries = list(filter(lambda x: x.timestamp >= interval.start_date and x.timestamp <= interval.end_date, xmr_entries))
+		filtered_interval.interest_entries = entries
+		print("Interval: " + filtered_interval.to_string())
+	print("------------------------------------")
+	#plot_interval("XMR", filtered_interest_intervals[11])
+	utils.plot_interval("XMR", filteredout_interest_intervals[25])
 
 if __name__ == "__main__":
 	main()

@@ -262,6 +262,9 @@ class DealStrategy(object):
         if not isinstance(ii, (InterestInterval)): raise Exception("interest interval should be of type InterestInterval")
         self._interest_interval = ii
 
+    def get_max_lending_rate(self):
+        return max(list(map(lambda x: x.lending_rate, self.interest_interval.lending_entries)))
+
 '''
 Abstract base class representing a strategy when deal should be entered
 '''
@@ -303,7 +306,12 @@ lending rate of 'lending_entries' falls below average for the interest interval
 class LrLessThanAvgCloseDealStrategy(DealStrategy):
 
     def get_close_time(self):
-        return
+        lending_entries = self.interest_interval.lending_entries
+        avg_lending_rate = self.interest_interval.get_avg_lending_rate()
+        for entry in lending_entries:
+            if entry.lending_rate < avg_lending_rate:
+                return entry.timestamp
+        return self.interest_interval.end_date
 
 '''
 A specific instance of CloseDealStrategy which assumes that best time to close the deal is when
@@ -311,8 +319,25 @@ lending rate of 'lending_entries' falls more than X% from the max lending rate f
 '''
 class LrFallsXPercentCloseDealStrategy(DealStrategy):
 
+    fall_percent = property(operator.attrgetter('_fall_percent'))
+
+    @fall_percent.setter
+    def fall_percent(self, fp):
+        if not fp: raise Exception("fall percent cannot be null")
+        if not isinstance(fp, (int, float)): raise Exception("fall percent should be int or float")
+        if not fp >= 0.0 and fp <= 100.0: raise Exception("fall percent should be in range [0.0, 100.0]")
+        self._fall_percent = fp
+
     def get_close_time(self):
-        return
+        if not fall_percent:
+            raise Exception("fall percent is not set")
+        max_lend_rate = get_max_lending_rate()
+        tgt_lending_rate = (100.0 - fall_percent)/100.0 * max_lend_rate
+        lending_entries = self.interest_interval.lending_entries
+        for entry in lending_entries:
+            if entry.lending_rate <= tgt_lending_rate:
+                return entry.timestamp
+        return self.interest_interval.end_date
         
 '''
 A specific instance of CloseDealStrategy which assumes that best time to close the deal is when
