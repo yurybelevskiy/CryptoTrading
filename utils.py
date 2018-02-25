@@ -72,17 +72,20 @@ def df_rows_to_lending_entries(ticker_name, rows, timestamp_col, lending_rate_co
 '''
 Plots InterestInterval on the graph, showcasing how price of interest entries moved against the price of lending entries
 '''
-def plot_interval(ticker_name, interval):
+def plot_interval(interest_ticker_name, lending_ticker_name, interval, save_figure_name=None):
 	plt.figure(1)
 	interest_timestamps = list(map(lambda x: x.timestamp, interval.interest_entries))
 	close_prices = list(map(lambda x: x.close_price, interval.interest_entries))
 	plt.plot(interest_timestamps, close_prices)
 	plt.xlabel("Timestamp")
-	plt.ylabel(ticker_name.upper() + " Price")
+	plt.ylabel(interest_ticker_name.upper() + " Price")
 	plt.figure(2)
 	lending_timestamps = list(map(lambda x: x.timestamp, interval.lending_entries))
 	lending_rates = list(map(lambda x: x.lending_rate, interval.lending_entries))
 	plt.plot(lending_timestamps, lending_rates)
 	plt.xlabel("Timestamp")
-	plt.ylabel(ticker_name.upper() + " Lending Rate")
-	plt.show()
+	plt.ylabel(lending_ticker_name.upper() + " Lending Rate")
+	if save_figure_name:
+		plt.savefig(save_figure_name)
+	else:
+		plt.show()

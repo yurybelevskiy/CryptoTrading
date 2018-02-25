@@ -4,6 +4,7 @@ import utils
 import math
 import matplotlib.pyplot as plt
 from structures import *
+from docx import Document
 
 '''
 Constants
@@ -119,9 +120,9 @@ def main():
 	btc_rows = utils.get_ticker_data("data/(2016-08-13)-btc_lending_rates_bitfinex.csv", period_start, period_end, 0)
 	btc_entries = utils.df_rows_to_lending_entries("BTC", btc_rows, 0, 3)
 	print("%d %s entries collected!" % (len(btc_entries), "BTC"))
-	xmr_rows = utils.get_ticker_data("data/xmr_bitfinex_data.csv", period_start, period_end, 0)
-	xmr_entries = utils.df_rows_to_interest_entries("XMR", xmr_rows, 0, 2, 5)
-	print("%d %s entries collected!" % (len(xmr_entries), "XMR"))
+	xmr_rows = utils.get_ticker_data("data/ltc_bitfinex_data.csv", period_start, period_end, 0)
+	xmr_entries = utils.df_rows_to_interest_entries("LTC", xmr_rows, 0, 2, 5)
+	print("%d %s entries collected!" % (len(xmr_entries), "TLC"))
 
 	#break data about lending rates into 10 day intervals
 	lending_intervals = generate_lending_intervals(TEN_DAYS, btc_entries)
@@ -129,6 +130,13 @@ def main():
 	# return interest intervals that have passed filter function and those which didn't
 	filtered_interest_intervals, filteredout_interest_intervals = get_interest_intervals(lending_intervals)
 	print("Total filtered interest intervals: %d" % (len(filtered_interest_intervals)))
+	print("Total filtered out intereste intervals: %d" % (len(filteredout_interest_intervals)))
+
+	# create .docx document for reporting results
+	docx = Document()
+	docx.add_heading("LTC Price Analysis based on BTC lending rate (from 2016-08-13 to 2017-09-13)", 0)
+	document.add_picture("'")
+
 	for interval in filtered_interest_intervals:
 		entries = list(filter(lambda x: x.timestamp >= interval.start_date and x.timestamp <= interval.end_date, xmr_entries))
 		interval.interest_entries = entries
@@ -140,8 +148,8 @@ def main():
 		filtered_interval.interest_entries = entries
 		print("Interval: " + filtered_interval.to_string())
 	print("------------------------------------")
-	#plot_interval("XMR", filtered_interest_intervals[11])
-	utils.plot_interval("XMR", filteredout_interest_intervals[25])
+	# plot interval on the graph
+	utils.plot_interval("LTC", "BTC", filtered_interest_intervals[11])
 
 if __name__ == "__main__":
 	main()

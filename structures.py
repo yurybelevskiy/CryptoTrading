@@ -186,6 +186,10 @@ class Interval(object):
 
     def to_string(self):
         return "[Interval] %s - start date: %d, end date: %d" % (self.ticker_name, self.start_date, self.end_date)
+
+    def to_docx(self, doc):
+        print "TODO"
+
 '''
 Subclass of interval which is characterized by entries that have a lending rate value.
 Typically, input data consisting of LendingTickerEntry instances is split to lending intervals of fixed length determined by set constant.
@@ -223,6 +227,9 @@ class LendingInterval(Interval):
     def to_string(self):
         return "[LendingInterval] %s - start date: %d, end date: %d, number of LendingTickerEntry instances: %d" % (self.ticker_name, self.start_date, self.end_date, len(self.lending_entries))
 
+    def to_docx(self, doc):
+        print "TODO"
+
 '''
 Subclass of LendingInterval which represents an "interest" interval: the interval that is characterized by ticker entries
 which lending rate value is higher than average
@@ -244,6 +251,9 @@ class InterestInterval(LendingInterval):
 
     def to_string(self):
         return "[InterestInterval] %s - start date: %d, end date: %d, num LendingTickerEntry instances: %d, num InterestTickerEntry instances: %d" % (self.ticker_name, self.start_date, self.end_date, len(self.lending_entries), len(self.interest_entries))
+
+    def to_docx(self, doc):
+        print "TODO"
 
 '''
 Abstract base class representing a stragegy which can be derived from InterestInterval
