@@ -79,6 +79,9 @@ def plot_interval(interest_ticker_name, lending_ticker_name, interval, save_figu
 	plt.plot(interest_timestamps, close_prices)
 	plt.xlabel("Timestamp")
 	plt.ylabel(interest_ticker_name.upper() + " Price")
+	if save_figure_name:
+		plt.savefig(save_figure_name + "_1.png")
+		plt.close()
 	plt.figure(2)
 	lending_timestamps = list(map(lambda x: x.timestamp, interval.lending_entries))
 	lending_rates = list(map(lambda x: x.lending_rate, interval.lending_entries))
@@ -86,6 +89,7 @@ def plot_interval(interest_ticker_name, lending_ticker_name, interval, save_figu
 	plt.xlabel("Timestamp")
 	plt.ylabel(lending_ticker_name.upper() + " Lending Rate")
 	if save_figure_name:
-		plt.savefig(save_figure_name)
+		plt.savefig(save_figure_name + "_2.png")
+		plt.close()
 	else:
 		plt.show()

@@ -2,14 +2,18 @@ import pandas as pd
 import os
 import utils
 import math
+import sys
 import matplotlib.pyplot as plt
 from structures import *
+from docx.shared import Inches
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.text.run import WD_BREAK
 
 '''
 Constants
 '''
-TEN_DAYS = 10*24*60*60
+TEN_DAYS = 16*24*60*60
 
 class BreakIt(Exception): pass
 
@@ -132,11 +136,6 @@ def main():
 	print("Total filtered interest intervals: %d" % (len(filtered_interest_intervals)))
 	print("Total filtered out intereste intervals: %d" % (len(filteredout_interest_intervals)))
 
-	# create .docx document for reporting results
-	docx = Document()
-	docx.add_heading("LTC Price Analysis based on BTC lending rate (from 2016-08-13 to 2017-09-13)", 0)
-	document.add_picture("'")
-
 	for interval in filtered_interest_intervals:
 		entries = list(filter(lambda x: x.timestamp >= interval.start_date and x.timestamp <= interval.end_date, xmr_entries))
 		interval.interest_entries = entries
@@ -148,8 +147,50 @@ def main():
 		filtered_interval.interest_entries = entries
 		print("Interval: " + filtered_interval.to_string())
 	print("------------------------------------")
-	# plot interval on the graph
-	utils.plot_interval("LTC", "BTC", filtered_interest_intervals[11])
+
+	# argument stands for the name of Word file
+	# TODO: refactor into proper method
+	if sys.argv[1]:
+		print("Generating Word document...")
+		filename = sys.argv[1]
+		doc = Document()
+		doc.add_heading("LTC Price Analysis based on BTC lending rate (from 2016-08-13 to 2017-09-13), 16 days interval", 0)
+		heading = doc.add_heading("Filtered Interest Intervals")
+		heading.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+		for idx, filtered_interval in enumerate(filtered_interest_intervals):
+			picture_prefix = "ltc_btc_" + str(idx+1)
+			utils.plot_interval("LTC", "BTC", filtered_interval, picture_prefix)
+			picture_1 = picture_prefix + "_1.png"
+			picture_2 = picture_prefix + "_2.png"
+			doc.add_picture(picture_1, width=Inches(4.5))
+			last_paragraph = doc.paragraphs[-1]
+			last_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+			doc.add_picture(picture_2, width=Inches(4.5))
+			last_paragraph = doc.paragraphs[-1]
+			last_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+			doc.add_page_break()
+		heading = doc.add_heading("Filtered out Interest Intervals")
+		heading.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+		for idx, unfiltered_interval in enumerate(filteredout_interest_intervals):
+			picture_prefix = "ltc_btc_unfiltered" + str(idx+1)
+			utils.plot_interval("LTC", "BTC", filtered_interval, picture_prefix)
+			picture_1 = picture_prefix + "_1.png"
+			picture_2 = picture_prefix + "_2.png"
+			doc.add_picture(picture_1, width=Inches(4.5))
+			last_paragraph = doc.paragraphs[-1]
+			last_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+			doc.add_picture(picture_2, width=Inches(4.5))
+			last_paragraph = doc.paragraphs[-1]
+			last_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+			if idx != len(filteredout_interest_intervals)-1:
+				doc.add_page_break()
+		doc.save(filename)
+		print("Cleaning up...")
+		dir_name = os.path.dirname(os.path.realpath(__file__))
+		files = os.listdir(dir_name)
+		for file in files:
+			if file.endswith(".png"):
+				os.remove(os.path.join(dir_name, file))
 
 if __name__ == "__main__":
 	main()
