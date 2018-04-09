@@ -205,9 +205,9 @@ class LendingInterval(Interval):
 
     @lending_entries.setter
     def lending_entries(self, le):
-        if not le: raise Exception("lending entries cannot be null")
-        if not isinstance(le, (list)): raise Exception("lending entries should be list")
-        if not all(isinstance(lending_entry, LendingTickerEntry) for lending_entry in le): raise Exception("entries in the list should be of type LendingTickerEntry")
+        if not le: raise ValueError("lending entries cannot be null")
+        if not isinstance(le, (list)): raise TypeError("lending entries should be list")
+        if not all(isinstance(lending_entry, LendingTickerEntry) for lending_entry in le): raise TypeError("entries in the list should be of type LendingTickerEntry")
         self._lending_entries = le
 
     def get_avg_lending_rate(self):
